@@ -8,6 +8,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ca3c3f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/images/logoowa.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/logopwa.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/logopwa.png">
+    <link rel="icon" href="assets/images/logopwa.png">
+    <link rel="shortcut icon" href="asstets/images/logopwa.png" type="image/x-icon">
+    <meta name="msapplication-TileImage" content="assets/images/logopwa.png">
+    <meta property="og:title" content="/assets/images/logopwa.png">
+
+
+
+
     <script>
         tailwind.config = {
             theme: {
@@ -436,6 +451,12 @@
                 btn.innerHTML = "Fechar Pedido (Usar GPS)";
                 btn.disabled = false;
             }
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => console.log('Service Worker registrado na brasa:', reg))
+                .catch(err => console.error('Erro ao registrar Service Worker no fogo:', err));
+            });
         }
     </script>
 </body>
