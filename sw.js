@@ -32,10 +32,10 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('activate', (event) => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    cache.keys().then((keys) => {
-        return Promise.all( 
-            keys.filter(key => key !== CACHE_NAME).map(key => cache.delete(key))
-        );
+    caches.keys().then((keys) => {          // ✅ caches
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)) // ✅
+      );
     })
   );
 });
