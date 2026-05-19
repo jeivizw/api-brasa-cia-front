@@ -74,11 +74,11 @@
             <button onclick="filtrarPedidos('pendente')"
                 class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Pendentes</button>
             <button onclick="filtrarPedidos('preparo')"
-                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em
-                Preparo</button>
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em Preparo</button>
+            <button onclick="filtrarPedidos('pronto')"
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Prontos</button>
             <button onclick="filtrarPedidos('entrega')"
-                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu
-                para Entrega</button>
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu para Entrega</button>
         </div>
 
         <div id="grid-pedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,6 +100,8 @@
         const API_URL = "https://back-brasa-cia.vercel.app/api"; 
 
         let pedidos = [];
+        let abaAtual = 'todos'; 
+
         async function carregarPedidosDaAPI() {
             try {
                 const resposta = await fetch(`${API_URL}/pedidos`);
@@ -107,7 +109,7 @@
                 if (resposta.ok) {
                     const dadosDoBanco = await resposta.json();
                     pedidos = dadosDoBanco;
-                    filtrarPedidos('todos');
+                    filtrarPedidos(abaAtual);
                 } else {
                     console.error("Falha ao buscar os pedidos do banco de dados.");
                 }
@@ -119,14 +121,25 @@
         function renderizarPedidos(lista = pedidos) {
             const grid = document.getElementById('grid-pedidos');
             const badge = document.getElementById('count-badge');
-            badge.innerText = lista.filter(p => p.status === 'pendente').length;
+            
+            badge.innerText = pedidos.filter(p => p.status === 'pendente').length;
 
             grid.innerHTML = '';
 
+            if (lista.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-20 text-center text-gray-400">
+                        <p>Nenhum pedido encontrado nesta secção.</p>
+                    </div>`;
+                return;
+            }
+
             lista.forEach(p => {
+                // ✨ NOVA COR ROXA ADICIONADA PARA O STATUS "PRONTO"
                 const statusCores = {
                     pendente: "bg-red-100 text-red-600",
                     preparo: "bg-warning/20 text-warning",
+                    pronto: "bg-purple-100 text-purple-600",
                     entrega: "bg-blue-100 text-blue-600",
                     concluido: "bg-success/20 text-success"
                 };
@@ -134,23 +147,22 @@
                 const card = document.createElement('div');
                 card.className = "order-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md";
                 
-                // 1. Identifica se o pedido é para retirada no balcão
                 const ehRetirada = p.retirada === true || p.cliente_endereco === "RETIRADA NO BALCÃO";
 
-                // 2. Monta o texto de localização com segurança (evita crash se p.localizacao for null)
                 const textoLocalizacao = ehRetirada 
                     ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>` 
-                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? p.localizacao.lat.toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? p.localizacao.lon.toFixed(4) : '0'}`;
+                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? Number(p.localizacao.lat).toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? Number(p.localizacao.lon).toFixed(4) : '0'}`;
 
-                // 3. Altera o texto do botão de despacho conforme o tipo do pedido
+                // ✨ SE FOR RETIRADA, ELE ALTERA O STATUS PARA 'pronto' EM VEZ DE 'entrega'
                 const botaostatusEntrega = ehRetirada
-                    ? `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
+                    ? `<button onclick="alterarStatus('${p.id}', 'pronto')" class="bg-purple-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
                     : `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">SAIU ENTREGA</button>`;
 
-                // 4. Se for retirada, remove o botão do mapa e adiciona um aviso pulsante em vermelho
                 const botaoMapaOuAviso = ehRetirada
                     ? `<div class="col-span-2 text-center bg-[#ca3c3f] text-white py-2 rounded-lg text-xs font-bold animate-pulse tracking-wider">🚨 RETIRADA NO BALCÃO</div>`
                     : `<button onclick="abrirMapa(${p.localizacao?.lat || 0}, ${p.localizacao?.lon || 0})" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
+
+                const listaItens = Array.isArray(p.itens) ? p.itens : [];
 
                 card.innerHTML = `
                     <div class="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
@@ -163,10 +175,10 @@
                     
                     <div class="p-4 flex-1">
                         <ul class="space-y-2 mb-4">
-                            ${p.itens.map(item => `
+                            ${listaItens.map(item => `
                                 <li class="flex justify-between text-sm">
                                     <span><b class="text-primary">${item.qtd}x</b> ${item.nome}</span>
-                                    <span class="font-medium text-gray-500">R$ ${item.preco.toFixed(2)}</span>
+                                    <span class="font-medium text-gray-500">R$ ${Number(item.preco).toFixed(2)}</span>
                                 </li>
                             `).join('')}
                         </ul>
@@ -179,7 +191,7 @@
 
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-gray-400 font-bold">TOTAL</span>
-                            <span class="text-xl font-black text-primary">R$ ${p.total.toFixed(2)}</span>
+                            <span class="text-xl font-black text-primary">R$ ${Number(p.total).toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -187,6 +199,7 @@
                         <button onclick="alterarStatus('${p.id}', 'preparo')" class="bg-warning text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PREPARAR</button>
                         ${botaostatusEntrega}
                         ${botaoMapaOuAviso}
+                        <button onclick="alterarStatus('${p.id}', 'concluido')" class="col-span-2 bg-success text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">CONCLUIR PEDIDO</button>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -201,21 +214,44 @@
             document.getElementById('modal-pedido').classList.add('hidden');
         }
 
-        function alterarStatus(id, novoStatus) {
-            const index = pedidos.findIndex(p => p.id === id);
-            if (index !== -1) {
-                pedidos[index].status = novoStatus;
-                renderizarPedidos();
-                // Aqui entraria o fetch para atualizar no seu banco de dados real
-                console.log(`Pedido ${id} alterado para ${novoStatus}`);
+        async function alterarStatus(id, novoStatus) {
+            try {
+                console.log(`Atualizando pedido ${id} para ${novoStatus}...`);
+                
+                const resposta = await fetch(`${API_URL}/pedidos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+
+                if (resposta.ok) {
+                    const index = pedidos.findIndex(p => String(p.id) === String(id) || Number(p.id) === Number(id));
+                    if (index !== -1) {
+                        pedidos[index].status = novoStatus;
+                        
+                        filtrarPedidos(abaAtual);
+                    } else {
+                        carregarPedidosDaAPI();
+                    }
+                } else {
+                    console.error("Erro ao atualizar o pedido no servidor.");
+                }
+            } catch (erro) {
+                console.error("Erro de conexão com a API ao tentar alterar o status:", erro);
             }
         }
 
         function abrirMapa(lat, lon) {
-            window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
+            if(!lat || !lon || (lat === 0 && lon === 0)) {
+                alert("Localização indisponível.");
+                return;
+            }
+            window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`, '_blank');
         }
 
         function filtrarPedidos(status) {
+            abaAtual = status;
+
             if (status === 'todos') {
                 renderizarPedidos(pedidos);
             } else {
@@ -224,19 +260,14 @@
             }
         }
 
-        // Relógio do Painel
         setInterval(() => {
             document.getElementById('relogio').innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        // Carrega os pedidos pela primeira vez assim que o painel for aberto
         carregarPedidosDaAPI();
 
-        // Configura o painel para ir buscar novos pedidos a cada 10 segundos
         setInterval(carregarPedidosDaAPI, 10000);
 
-        // Inicialização
-        renderizarPedidos();
     </script>
 </body>
 
