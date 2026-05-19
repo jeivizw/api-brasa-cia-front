@@ -24,7 +24,7 @@
     <style>
         body { font-family: 'Barlow', sans-serif; background-color: #f4f4f4; }
         .order-card { transition: all 0.3s ease; }
-        .status-badge {     @apply px-3 py-1 rounded-full text-xs font-bold uppercase; }
+        .status-badge { @apply px-3 py-1 rounded-full text-xs font-bold uppercase; }
     </style>
 </head>
 <body class="text-dark">
@@ -70,42 +70,41 @@
     </div>
 
     <script>
-        // Simulando Banco de Dados de Pedidos
-        let pedidos = [
-            {
-                id: "1052",
-                cliente: "João Silva",
-                telefone: "(15) 99123-4567",
-                itens: [
-                    { nome: "Picanha Premium", qtd: 1, preco: 91.90 },
-                    { nome: "T-bone Steak", qtd: 2, preco: 119.90 }
-                ],
-                total: 211.80,
-                status: "pendente",
-                hora: "19:45",
-                localizacao: { lat: -23.5015, lon: -47.4521 }
-            },
-            {
-                id: "1053",
-                cliente: "Maria Oliveira",
-                telefone: "(15) 98877-6655",
-                itens: [
-                    { nome: "Combo Linguiça Toscana", qtd: 1, preco: 49.00 },
-                    { nome: "Coca 350ml", qtd: 1, preco: 7.90 }
-                ],
-                total: 56.90,
-                status: "preparo",
-                hora: "20:05",
-                localizacao: { lat: -23.5100, lon: -47.4600 }
+        // Começamos com a lista de pedidos vazia (ela virá do banco de dados)
+        let pedidos = [];
+        
+        // URL da sua API do Back-end local
+        const API_URL = 'http://localhost:3000/api/pedidos';
+
+        // ✨ FUNÇÃO QUE BUSCA OS PEDIDOS REAIS DO BANCO DE DADOS
+        async function carregarPedidosDoBanco() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Erro na resposta do servidor');
+                
+                pedidos = await response.json();
+                renderizarPedidos(); // Atualiza a tela com os dados reais
+            } catch (error) {
+                console.error('Erro ao buscar pedidos do banco:', error);
             }
-        ];
+        }
 
         function renderizarPedidos(lista = pedidos) {
             const grid = document.getElementById('grid-pedidos');
             const badge = document.getElementById('count-badge');
-            badge.innerText = lista.filter(p => p.status === 'pendente').length;
+            
+            // Conta quantos estão pendentes na lista atual
+            badge.innerText = pedidos.filter(p => p.status === 'pendente').length;
             
             grid.innerHTML = '';
+
+            if (lista.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-20 text-center text-gray-400">
+                        <p>Nenhum pedido encontrado nesta seção.</p>
+                    </div>`;
+                return;
+            }
 
             lista.forEach(p => {
                 const statusCores = {
@@ -118,23 +117,26 @@
                 const card = document.createElement('div');
                 card.className = "order-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md";
                 
-                // 1. Identifica com precisão se o pedido é para retirada no balcão
+                // Identifica se o pedido é para retirada no balcão
                 const ehRetirada = p.retirada === true || p.cliente_endereco === "RETIRADA NO BALCÃO";
 
-                // 2. Proteção contra erro .toFixed() se a localização vier nula ou se for retirada
+                // Proteção contra erro .toFixed() se a localização vier nula ou se for retirada
                 const textoLocalizacao = ehRetirada 
                     ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>` 
-                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? p.localizacao.lat.toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? p.localizacao.lon.toFixed(4) : '0'}`;
+                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? Number(p.localizacao.lat).toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? Number(p.localizacao.lon).toFixed(4) : '0'}`;
 
-                // 3. Altera dinamicamente o texto do botão de despacho se for retirada
+                // Altera dinamicamente o texto do botão de despacho se for retirada
                 const botaostatusEntrega = ehRetirada
                     ? `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
                     : `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">SAIU ENTREGA</button>`;
 
-                // 4. Troca o botão de GPS por um alerta pulsante bem visível para a gerência/painel
+                // Troca o botão de GPS por um alerta pulsante bem visível para a gerência/painel
                 const botaoMapaOuAviso = ehRetirada
                     ? `<div class="col-span-2 text-center bg-[#ca3c3f] text-white py-2 rounded-lg text-xs font-bold animate-pulse tracking-wider">🚨 RETIRADA NO BALCÃO</div>`
                     : `<button onclick="abrirMapa(${p.localizacao?.lat || 0}, ${p.localizacao?.lon || 0})" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
+
+                // Transforma em array caso os itens venham como objeto direto do banco
+                const listaItens = Array.isArray(p.itens) ? p.itens : [];
 
                 card.innerHTML = `
                     <div class="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
@@ -147,10 +149,10 @@
                     
                     <div class="p-4 flex-1">
                         <ul class="space-y-2 mb-4">
-                            ${p.itens.map(item => `
+                            ${listaItens.map(item => `
                                 <li class="flex justify-between text-sm">
                                     <span><b class="text-primary">${item.qtd}x</b> ${item.nome}</span>
-                                    <span class="font-medium text-gray-500">R$ ${item.preco.toFixed(2)}</span>
+                                    <span class="font-medium text-gray-500">R$ ${Number(item.preco).toFixed(2)}</span>
                                 </li>
                             `).join('')}
                         </ul>
@@ -163,7 +165,7 @@
 
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-gray-400 font-bold">TOTAL</span>
-                            <span class="text-xl font-black text-primary">R$ ${p.total.toFixed(2)}</span>
+                            <span class="text-xl font-black text-primary">R$ ${Number(p.total).toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -171,23 +173,41 @@
                         <button onclick="alterarStatus('${p.id}', 'preparo')" class="bg-warning text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PREPARAR</button>
                         ${botaostatusEntrega}
                         ${botaoMapaOuAviso}
+                        <button onclick="alterarStatus('${p.id}', 'concluido')" class="col-span-2 bg-success text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">CONCLUIR PEDIDO</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        function alterarStatus(id, novoStatus) {
-            const index = pedidos.findIndex(p => p.id === id);
-            if (index !== -1) {
-                pedidos[index].status = novoStatus;
-                renderizarPedidos();
-                // Aqui entraria o fetch para atualizar no seu banco de dados real
-                console.log(`Pedido ${id} alterado para ${novoStatus}`);
+        // ✨ ATUALIZADO PARA ENVIAR A MUDANÇA DE STATUS PARA O SEU BACK-END / SUPABASE
+        async function alterarStatus(id, novoStatus) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+
+                if (response.ok) {
+                    // Atualiza localmente o status do pedido modificado para atualizar a tela sem delay
+                    const index = pedidos.findIndex(p => p.id === id);
+                    if (index !== -1) {
+                        pedidos[index].status = novoStatus;
+                        renderizarPedidos();
+                    }
+                    console.log(`Pedido ${id} atualizado com sucesso no Supabase para: ${novoStatus}`);
+                } else {
+                    console.error('Erro ao atualizar o status no servidor');
+                }
+            } catch (error) {
+                console.error('Erro na requisição para o servidor:', error);
             }
         }
 
+        // Link oficial corrigido para abrir o marcador do GPS real no Google Maps
         function abrirMapa(lat, lon) {
+            if(lat === 0 && lon === 0) return alert("Localização indisponível.");
             window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
         }
 
@@ -205,8 +225,11 @@
             document.getElementById('relogio').innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        // Inicialização
-        renderizarPedidos();
+        // ✨ Chamada inicial para buscar os dados vivos assim que abre a página
+        carregarPedidosDoBanco();
+
+        // ✨ Configura o painel para atualizar sozinho a cada 10 segundos buscando novas compras
+        setInterval(carregarPedidosDoBanco, 10000);
 
     </script>
 </body>
