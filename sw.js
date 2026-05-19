@@ -2,6 +2,7 @@ const CACHE_NAME = 'my-app-cache-v1';
 const ASSETS = [
   './',
   './index.html',
+  './cozinha.html', 
   './manifest.json',
   './assets/logo.png',
   './assets/logopwa.png',
@@ -9,6 +10,7 @@ const ASSETS = [
   './assets/banner.png',
   './assets/whatsapp.png',
 ];
+
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
