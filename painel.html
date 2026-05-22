@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,11 +23,21 @@
         }
     </script>
     <style>
-        body { font-family: 'Barlow', sans-serif; background-color: #f4f4f4; }
-        .order-card { transition: all 0.3s ease; }
-        .status-badge { @apply px-3 py-1 rounded-full text-xs font-bold uppercase; }
+        body {
+            font-family: 'Barlow', sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .order-card {
+            transition: all 0.3s ease;
+        }
+
+        .status-badge {
+            @apply px-3 py-1 rounded-full text-xs font-bold uppercase;
+        }
     </style>
 </head>
+
 <body class="text-dark">
 
     <header class="bg-dark text-white p-4 shadow-lg sticky top-0 z-50">
@@ -35,13 +46,20 @@
                 <div class="bg-primary p-2 rounded-lg">
                     <img src="assets/images/logo.png" alt="Logo" class="h-8" onerror="this.style.display='none'">
                 </div>
-                <h1 class="text-xl font-extrabold tracking-tight">PAINEL DE PEDIDOS <span class="text-primary">| BRASA & CIA</span></h1>
+                <h1 class="text-xl font-extrabold tracking-tight">PAINEL DE PEDIDOS <span class="text-primary">| BRASA &
+                        CIA</span></h1>
             </div>
             <div class="flex items-center gap-4">
                 <span id="relogio" class="font-mono bg-black/30 px-3 py-1 rounded text-sm">00:00:00</span>
                 <div class="relative">
-                    <span class="absolute -top-1 -right-1 bg-primary text-white text-[10px] w-4 h-4 flex justify-center items-center rounded-full animate-bounce" id="count-badge">0</span>
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    <span
+                        class="absolute -top-1 -right-1 bg-primary text-white text-[10px] w-4 h-4 flex justify-center items-center rounded-full animate-bounce"
+                        id="count-badge">0</span>
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                        </path>
+                    </svg>
                 </div>
             </div>
         </div>
@@ -49,10 +67,16 @@
 
     <main class="container mx-auto p-4 md:p-8">
         <div class="flex gap-4 mb-8 overflow-x-auto pb-2">
-            <button onclick="filtrarPedidos('todos')" class="bg-dark text-white px-6 py-2 rounded-xl font-bold whitespace-nowrap">Todos</button>
-            <button onclick="filtrarPedidos('pendente')" class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Pendentes</button>
-            <button onclick="filtrarPedidos('preparo')" class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em Preparo</button>
-            <button onclick="filtrarPedidos('entrega')" class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu para Entrega</button>
+            <button onclick="filtrarPedidos('todos')"
+                class="bg-dark text-white px-6 py-2 rounded-xl font-bold whitespace-nowrap">Todos</button>
+            <button onclick="filtrarPedidos('pendente')"
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Pendentes</button>
+            <button onclick="filtrarPedidos('preparo')"
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em
+                Preparo</button>
+            <button onclick="filtrarPedidos('entrega')"
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu
+                para Entrega</button>
         </div>
 
         <div id="grid-pedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -65,25 +89,22 @@
     <div id="modal-pedido" class="fixed inset-0 bg-black/50 hidden z-[60] flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl">
             <div id="modal-content"></div>
-            <button onclick="fecharModal()" class="mt-6 w-full py-3 bg-gray-200 rounded-xl font-bold text-dark">Fechar</button>
+            <button onclick="fecharModal()"
+                class="mt-6 w-full py-3 bg-gray-200 rounded-xl font-bold text-dark">Fechar</button>
         </div>
     </div>
 
     <script>
-        // Começamos com a lista de pedidos vazia (ela virá do banco de dados)
         let pedidos = [];
-        
-        // URL da sua API do Back-end local
         const API_URL = 'https://back-brasa-cia.vercel.app/api';
 
-        // ✨ FUNÇÃO QUE BUSCA OS PEDIDOS REAIS DO BANCO DE DADOS
         async function carregarPedidosDoBanco() {
             try {
                 const response = await fetch(API_URL);
                 if (!response.ok) throw new Error('Erro na resposta do servidor');
-                
+
                 pedidos = await response.json();
-                renderizarPedidos(); // Atualiza a tela com os dados reais
+                renderizarPedidos();
             } catch (error) {
                 console.error('Erro ao buscar pedidos do banco:', error);
             }
@@ -92,10 +113,9 @@
         function renderizarPedidos(lista = pedidos) {
             const grid = document.getElementById('grid-pedidos');
             const badge = document.getElementById('count-badge');
-            
-            // Conta quantos estão pendentes na lista atual
+
             badge.innerText = pedidos.filter(p => p.status === 'pendente').length;
-            
+
             grid.innerHTML = '';
 
             if (lista.length === 0) {
@@ -116,26 +136,22 @@
 
                 const card = document.createElement('div');
                 card.className = "order-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md";
-                
-                // Identifica se o pedido é para retirada no balcão
+
                 const ehRetirada = p.retirada === true || p.cliente_endereco === "RETIRADA NO BALCÃO";
 
-                // Proteção contra erro .toFixed() se a localização vier nula ou se for retirada
-                const textoLocalizacao = ehRetirada 
-                    ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>` 
-                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? Number(p.localizacao.lat).toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? Number(p.localizacao.lon).toFixed(4) : '0'}`;
+                const textoLocalizacao = ehRetirada
+                    ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>`
+                    : `<b>Localização:</b> ${p.cliente_endereco || 'Endereço não informado'}`;
 
-                // Altera dinamicamente o texto do botão de despacho se for retirada
                 const botaostatusEntrega = ehRetirada
                     ? `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
                     : `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">SAIU ENTREGA</button>`;
 
-                // Troca o botão de GPS por um alerta pulsante bem visível para a gerência/painel
+                // Protegido: Passando p.id para evitar quebras de aspas no HTML
                 const botaoMapaOuAviso = ehRetirada
                     ? `<div class="col-span-2 text-center bg-[#ca3c3f] text-white py-2 rounded-lg text-xs font-bold animate-pulse tracking-wider">🚨 RETIRADA NO BALCÃO</div>`
-                    : `<button onclick="abrirMapa(${p.localizacao?.lat || 0}, ${p.localizacao?.lon || 0})" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
+                    : `<button onclick="abrirMapa('${p.id}')" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
 
-                // Transforma em array caso os itens venham como objeto direto do banco
                 const listaItens = Array.isArray(p.itens) ? p.itens : [];
 
                 card.innerHTML = `
@@ -180,7 +196,6 @@
             });
         }
 
-        // ✨ ATUALIZADO PARA ENVIAR A MUDANÇA DE STATUS PARA O SEU BACK-END / SUPABASE
         async function alterarStatus(id, novoStatus) {
             try {
                 const response = await fetch(`${API_URL}/${id}`, {
@@ -190,25 +205,32 @@
                 });
 
                 if (response.ok) {
-                    // Atualiza localmente o status do pedido modificado para atualizar a tela sem delay
-                    const index = pedidos.findIndex(p => p.id === id);
+                    const index = pedidos.findIndex(p => String(p.id) === String(id));
                     if (index !== -1) {
                         pedidos[index].status = novoStatus;
                         renderizarPedidos();
                     }
-                    console.log(`Pedido ${id} atualizado com sucesso no Supabase para: ${novoStatus}`);
+                    console.log(`Pedido ${id} updated to: ${novoStatus}`);
                 } else {
                     console.error('Erro ao atualizar o status no servidor');
                 }
             } catch (error) {
-                console.error('Erro na requisição para o servidor:', error);
+                console.error('Erro na requisição:', error);
             }
         }
 
-        // Link oficial corrigido para abrir o marcador do GPS real no Google Maps
-        function abrirMapa(lat, lon) {
-            if(lat === 0 && lon === 0) return alert("Localização indisponível.");
-            window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
+        // Nova lógica baseada em ID para evitar conflitos de strings e corrigir o link inválido
+        function abrirMapa(idPedido) {
+            const pedido = pedidos.find(p => String(p.id) === String(idPedido));
+
+            if (!pedido || !pedido.cliente_endereco || pedido.cliente_endereco === '') {
+                alert("Endereço indisponível ou não informado.");
+                return;
+            }
+
+            // URL oficial e universal para buscar texto de endereço no Maps
+            const urlBusca = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pedido.cliente_endereco)}`;
+            window.open(urlBusca, '_blank');
         }
 
         function filtrarPedidos(status) {
@@ -220,17 +242,14 @@
             }
         }
 
-        // Relógio do Painel
         setInterval(() => {
             document.getElementById('relogio').innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        // ✨ Chamada inicial para buscar os dados vivos assim que abre a página
         carregarPedidosDoBanco();
-
-        // ✨ Configura o painel para atualizar sozinho a cada 10 segundos buscando novas compras
         setInterval(carregarPedidosDoBanco, 10000);
 
     </script>
 </body>
+
 </html>

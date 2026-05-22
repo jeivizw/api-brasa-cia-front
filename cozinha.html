@@ -74,11 +74,13 @@
             <button onclick="filtrarPedidos('pendente')"
                 class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Pendentes</button>
             <button onclick="filtrarPedidos('preparo')"
-                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em Preparo</button>
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Em
+                Preparo</button>
             <button onclick="filtrarPedidos('pronto')"
                 class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Prontos</button>
             <button onclick="filtrarPedidos('entrega')"
-                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu para Entrega</button>
+                class="bg-white border border-gray-200 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 whitespace-nowrap">Saiu
+                para Entrega</button>
         </div>
 
         <div id="grid-pedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -97,14 +99,14 @@
     </div>
 
     <script>
-        const API_URL = "https://back-brasa-cia.vercel.app/api"; 
+        const API_URL = "https://back-brasa-cia.vercel.app/api";
 
         let pedidos = [];
-        let abaAtual = 'todos'; 
+        let abaAtual = 'todos';
 
         async function carregarPedidosDaAPI() {
             try {
-                const resposta = await fetch(`${API_URL}/pedidos`);
+                const resposta = await fetch(API_URL + "/pedidos");
 
                 if (resposta.ok) {
                     const dadosDoBanco = await resposta.json();
@@ -121,7 +123,7 @@
         function renderizarPedidos(lista = pedidos) {
             const grid = document.getElementById('grid-pedidos');
             const badge = document.getElementById('count-badge');
-            
+
             badge.innerText = pedidos.filter(p => p.status === 'pendente').length;
 
             grid.innerHTML = '';
@@ -135,7 +137,6 @@
             }
 
             lista.forEach(p => {
-                // ✨ NOVA COR ROXA ADICIONADA PARA O STATUS "PRONTO"
                 const statusCores = {
                     pendente: "bg-red-100 text-red-600",
                     preparo: "bg-warning/20 text-warning",
@@ -146,21 +147,21 @@
 
                 const card = document.createElement('div');
                 card.className = "order-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md";
-                
+
                 const ehRetirada = p.retirada === true || p.cliente_endereco === "RETIRADA NO BALCÃO";
 
-                const textoLocalizacao = ehRetirada 
-                    ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>` 
-                    : `<b>Localização:</b> ${(p.localizacao && p.localizacao.lat) ? Number(p.localizacao.lat).toFixed(4) : '0'}, ${(p.localizacao && p.localizacao.lon) ? Number(p.localizacao.lon).toFixed(4) : '0'}`;
+                const textoLocalizacao = ehRetirada
+                    ? `<b>Tipo:</b> <span class="text-red-600 font-bold uppercase">Retirada no Balcão</span>`
+                    : `<b>Localização:</b> ${p.cliente_endereco || 'Endereço não informado'}`;
 
-                // ✨ SE FOR RETIRADA, ELE ALTERA O STATUS PARA 'pronto' EM VEZ DE 'entrega'
                 const botaostatusEntrega = ehRetirada
-                    ? `<button onclick="alterarStatus('${p.id}', 'pronto')" class="bg-purple-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
+                    ? `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">PRONTO P/ RETIRAR</button>`
                     : `<button onclick="alterarStatus('${p.id}', 'entrega')" class="bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:opacity-90">SAIU ENTREGA</button>`;
 
+                // Alterado para passar o ID de forma segura para não quebrar o HTML
                 const botaoMapaOuAviso = ehRetirada
                     ? `<div class="col-span-2 text-center bg-[#ca3c3f] text-white py-2 rounded-lg text-xs font-bold animate-pulse tracking-wider">🚨 RETIRADA NO BALCÃO</div>`
-                    : `<button onclick="abrirMapa(${p.localizacao?.lat || 0}, ${p.localizacao?.lon || 0})" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
+                    : `<button onclick="abrirMapa('${p.id}')" class="col-span-2 border border-dark text-dark py-2 rounded-lg text-xs font-bold hover:bg-dark hover:text-white transition-colors">VER NO MAPA (GPS)</button>`;
 
                 const listaItens = Array.isArray(p.itens) ? p.itens : [];
 
@@ -217,7 +218,7 @@
         async function alterarStatus(id, novoStatus) {
             try {
                 console.log(`Atualizando pedido ${id} para ${novoStatus}...`);
-                
+
                 const resposta = await fetch(`${API_URL}/pedidos/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -228,7 +229,6 @@
                     const index = pedidos.findIndex(p => String(p.id) === String(id) || Number(p.id) === Number(id));
                     if (index !== -1) {
                         pedidos[index].status = novoStatus;
-                        
                         filtrarPedidos(abaAtual);
                     } else {
                         carregarPedidosDaAPI();
@@ -241,12 +241,18 @@
             }
         }
 
-        function abrirMapa(lat, lon) {
-            if(!lat || !lon || (lat === 0 && lon === 0)) {
-                alert("Localização indisponível.");
+        function abrirMapa(idPedido) {
+            // Busca o pedido na lista local usando o ID recebido
+            const pedido = pedidos.find(p => String(p.id) === String(idPedido));
+            
+            if(!pedido || !pedido.cliente_endereco || pedido.cliente_endereco === '') {
+                alert("Endereço indisponível ou não informado.");
                 return;
             }
-            window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`, '_blank');
+            
+            // Link de busca limpo e oficial do Google Maps por texto de endereço
+            const urlBusca = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pedido.cliente_endereco)}`;
+            window.open(urlBusca, '_blank');
         }
 
         function filtrarPedidos(status) {
@@ -265,7 +271,6 @@
         }, 1000);
 
         carregarPedidosDaAPI();
-
         setInterval(carregarPedidosDaAPI, 10000);
 
     </script>

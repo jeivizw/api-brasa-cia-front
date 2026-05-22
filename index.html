@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br" class="scroll-smooth">
 
@@ -311,6 +312,8 @@
                 <div class="flex flex-col gap-3 mb-4">
                     <input type="text" id="cliente-nome" placeholder="Seu Nome Completo" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
                     
+                    <input type="tel" id="cliente-telefone" placeholder="Seu Telefone / WhatsApp" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
+                    
                     <label class="flex items-center justify-between cursor-pointer select-none bg-white p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                         <span class="font-bold text-dark text-[15px]">Retirar no Balcão?</span>
                         <div class="relative">
@@ -329,7 +332,7 @@
                 </div>
                 <button onclick="fecharPedido()" id="btn-fechar-pedido"
                     class="w-full bg-primary text-white py-3 rounded-xl text-lg font-bold shadow-lg hover:bg-red-700 active:scale-95 transition-all">
-                    Fechar Pedido (Usar GPS)
+                    Fechar Pedido
                 </button>
             </div>
         </div>
@@ -343,7 +346,6 @@
         let carrinho = [];
         let valorTotal = 0;
 
-        // --- Função nova para animar e esconder o campo de endereço ---
         function toggleRetirada() {
             const toggle = document.getElementById('retirada-balcao');
             const inputEndereco = document.getElementById('cliente-endereco');
@@ -354,7 +356,7 @@
                 btnPedido.innerText = "Confirmar Pedido (Vou Retirar)";
             } else {
                 inputEndereco.style.display = 'block';
-                btnPedido.innerText = "Fechar Pedido (Usar GPS)";
+                btnPedido.innerText = "Fechar Pedido";
             }
         }
 
@@ -434,6 +436,7 @@
             content.classList.add('translate-y-full', 'sm:scale-95');
         }
 
+        // ✨ FUNÇÃO TOTALMENTE REESTRUTURADA PARA BATER COM O BANCO DE DADOS
         async function fecharPedido() {
             if (carrinho.length === 0) {
                 alert("Adicione itens ao carrinho antes de fechar o pedido!");
@@ -441,84 +444,71 @@
             }
 
             const nome = document.getElementById('cliente-nome').value.trim();
+            const telefone = document.getElementById('cliente-telefone').value.trim();
             const enderecoOriginal = document.getElementById('cliente-endereco').value.trim();
             const vaiRetirar = document.getElementById('retirada-balcao').checked;
 
-            if (!nome) {
-                alert("Por favor, preencha seu nome completo!");
+            if (!nome || !telefone) {
+                alert("Por favor, preencha seu nome e telefone!");
                 return;
             }
 
-            // Se NÃO for retirar, exige o endereço
             if (!vaiRetirar && !enderecoOriginal) {
                 alert("Por favor, preencha o endereço completo para a entrega!");
                 return;
             }
 
-            // Se for retirar, forçamos o endereço para o Back e a Cozinha saberem!
             const enderecoFinal = vaiRetirar ? "RETIRADA NO BALCÃO" : enderecoOriginal;
+            
+            // Gera a hora atual (ex: 19:45)
+            const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
             const btn = document.getElementById('btn-fechar-pedido');
             btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processando...`;
             btn.disabled = true;
 
-            const enviarDadosParaAPI = async (lat = null, lon = null) => {
-                const payloadPedido = {
-                    cliente_nome: nome,
-                    cliente_endereco: enderecoFinal,
-                    itens: carrinho,
-                    valor_total: valorTotal,
-                    latitude: lat,
-                    longitude: lon,
-                    retirada: vaiRetirar
-                };
-
-                try {
-                    const resposta = await fetch(`${API_URL}/pedidos`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payloadPedido)
-                    });
-
-                    if (resposta.status === 201) {
-                        alert("Pedido confirmado com sucesso!\nO seu churrasco já vai ser preparado!");
-                        carrinho = [];
-                        valorTotal = 0;
-                        atualizarTotais();
-                        fecharModalCarrinho();
-                        
-                        document.getElementById('cliente-nome').value = '';
-                        document.getElementById('cliente-endereco').value = '';
-                        
-                        // Reseta o botão de toggle se quiser
-                        if(vaiRetirar) {
-                            document.getElementById('retirada-balcao').click(); 
-                        }
-                    } else {
-                        alert("Ops! Ocorreu um problema no sistema.");
-                    }
-                } catch (erro) {
-                    console.error("Erro ao enviar pedido:", erro);
-                    alert("Erro de conexão. Verifique sua internet.");
-                } finally {
-                    btn.innerHTML = vaiRetirar ? "Confirmar Pedido (Vou Retirar)" : "Fechar Pedido (Usar GPS)";
-                    btn.disabled = false;
-                }
+            // Este payload agora tem os nomes exatos das colunas do seu banco de dados
+            const payloadPedido = {
+                cliente: nome,
+                telefone: telefone,
+                hora: horaAtual,
+                total: valorTotal,
+                status: 'pendente',
+                retirada: vaiRetirar,
+                cliente_endereco: enderecoFinal,
+                itens: carrinho
             };
 
-            // Se for retirar, envia IMEDIATAMENTE (Não perde tempo buscando GPS)
-            if (vaiRetirar) {
-                enviarDadosParaAPI(null, null);
-            } 
-            // Se for entrega, tenta pegar o GPS
-            else if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    posicao => enviarDadosParaAPI(posicao.coords.latitude, posicao.coords.longitude),
-                    erro => enviarDadosParaAPI(null, null),
-                    { enableHighAccuracy: true, timeout: 6000 }
-                );
-            } else {
-                enviarDadosParaAPI(null, null);
+            try {
+                const resposta = await fetch(`${API_URL}/pedidos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadPedido)
+                });
+
+                if (resposta.status === 201 || resposta.ok) {
+                    alert("Pedido confirmado com sucesso!\nO seu churrasco já vai ser preparado!");
+                    carrinho = [];
+                    valorTotal = 0;
+                    atualizarTotais();
+                    fecharModalCarrinho();
+                    
+                    document.getElementById('cliente-nome').value = '';
+                    document.getElementById('cliente-telefone').value = '';
+                    document.getElementById('cliente-endereco').value = '';
+                    
+                    if(vaiRetirar) {
+                        document.getElementById('retirada-balcao').click(); 
+                    }
+                } else {
+                    alert("Ops! Ocorreu um problema no sistema de pedidos.");
+                }
+            } catch (erro) {
+                console.error("Erro ao enviar pedido:", erro);
+                alert("Erro de conexão. Verifique sua internet.");
+            } finally {
+                btn.innerHTML = vaiRetirar ? "Confirmar Pedido (Vou Retirar)" : "Fechar Pedido";
+                btn.disabled = false;
             }
         }
 
@@ -531,3 +521,4 @@
     </script>
 </body>
 </html>
+
