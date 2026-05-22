@@ -177,10 +177,10 @@
                     <div class="p-4 flex-1">
                         <ul class="space-y-2 mb-4">
                             ${listaItens.map(item => `
-                                <li class="flex justify-between text-sm">
-                                    <span><b class="text-primary">${item.qtd}x</b> ${item.nome}</span>
-                                    <span class="font-medium text-gray-500">R$ ${Number(item.preco).toFixed(2)}</span>
-                                </li>
+                        <li class="flex justify-between text-sm">
+                        <span><b class="text-primary">${item.qtd || item.quantidade || 1}x</b> ${item.nome}</span>
+                        <span class="font-medium text-gray-500">R$ ${Number(item.preco).toFixed(2)}</span>
+                        </li>
                             `).join('')}
                         </ul>
                         
@@ -244,12 +244,12 @@
         function abrirMapa(idPedido) {
             // Busca o pedido na lista local usando o ID recebido
             const pedido = pedidos.find(p => String(p.id) === String(idPedido));
-            
-            if(!pedido || !pedido.cliente_endereco || pedido.cliente_endereco === '') {
+
+            if (!pedido || !pedido.cliente_endereco || pedido.cliente_endereco === '') {
                 alert("Endereço indisponível ou não informado.");
                 return;
             }
-            
+
             // Link de busca limpo e oficial do Google Maps por texto de endereço
             const urlBusca = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pedido.cliente_endereco)}`;
             window.open(urlBusca, '_blank');
